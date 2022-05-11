@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"jds-test/auth"
 	"jds-test/helper"
 	"jds-test/user"
 	"net/http"
@@ -14,10 +15,11 @@ import (
 
 type userHandler struct {
 	userService user.Service
+	authService auth.Service
 }
 
-func NewUserHandler(userService user.Service) *userHandler {
-	return &userHandler{userService}
+func NewUserHandler(userService user.Service, authService auth.Service) *userHandler {
+	return &userHandler{userService, authService}
 }
 
 func (h *userHandler) RegisterUser(c *gin.Context) {
@@ -85,9 +87,28 @@ func (h *userHandler) Login(c *gin.Context) {
 		return
 	}
 
-	formatter := user.FormatLoggedinUser(loggedinUser)
+	token, err := h.authService.GenerateToken(loggedinUser.UserID)
+	if err != nil {
+		errorMessage := gin.H{"errors": err.Error()}
+		response := helper.APIResponse("Login failed", http.StatusBadRequest, "error", errorMessage)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	formatter := user.FormatLoggedinUser(loggedinUser, token)
 
 	response := helper.APIResponse("Successfuly loggedin", http.StatusOK, "success", formatter)
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *userHandler) ValidateToken(c *gin.Context) {
+	currentUser := c.MustGet("currentUser").(user.User)
+	expiredAt := c.MustGet("expiredAt").(string)
+	isValid := c.MustGet("isValid").(bool)
+
+	formatter := user.FormatTokenValidation(currentUser, expiredAt, isValid)
+
+	response := helper.APIResponse("Token is validate", http.StatusOK, "success", formatter)
 
 	c.JSON(http.StatusOK, response)
 }

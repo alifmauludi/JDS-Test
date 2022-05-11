@@ -11,3 +11,9 @@ type User struct {
 	UpdatedDate   time.Time
 	PlainPassword string
 }
+
+type UserToken struct {
+	Username  string
+	IsValid   bool
+	ExpiredAt time.Time
+}
