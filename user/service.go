@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 type Service interface {
 	RegisterUser(input RegisterUserInput) (User, error)
+	Login(input LoginInput) (User, error)
 }
 
 type service struct {
@@ -43,6 +45,15 @@ func (s *service) RegisterUser(input RegisterUserInput) (User, error) {
 	user.Password = string(passwordHash)
 	user.CreatedDate = time.Now()
 
+	usernameCheck, err := s.repository.FindByUsername(input.Username)
+	if err != nil {
+		return usernameCheck, err
+	}
+
+	if usernameCheck.Username != "" {
+		return user, errors.New("Username has been registered!")
+	}
+
 	newUser, err := s.repository.Save(user)
 	if err != nil {
 		return newUser, err
@@ -51,4 +62,26 @@ func (s *service) RegisterUser(input RegisterUserInput) (User, error) {
 	newUser.PlainPassword = password
 
 	return newUser, nil
+}
+
+func (s *service) Login(input LoginInput) (User, error) {
+	username := input.Username
+	password := input.Password
+
+	user, err := s.repository.FindByUsername(username)
+
+	if err != nil {
+		return user, err
+	}
+
+	if user.UserID == 0 {
+		return user, errors.New("User not found!")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
 }

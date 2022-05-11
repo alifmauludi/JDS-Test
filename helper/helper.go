@@ -1,6 +1,9 @@
 package helper
 
-import "github.com/go-playground/validator/v10"
+import (
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
+)
 
 type Response struct {
 	Meta Meta        `json:"meta"`
@@ -13,7 +16,7 @@ type Meta struct {
 	Status  string `json:"status"`
 }
 
-func APIReponse(message string, code int, status string, data interface{}) Response {
+func APIResponse(message string, code int, status string, data interface{}) Response {
 	meta := Meta{
 		Message: message,
 		Code:    code,
@@ -28,11 +31,12 @@ func APIReponse(message string, code int, status string, data interface{}) Respo
 	return jsonResponse
 }
 
-func FormatValidationError(err error) []string {
+func FormatValidationError(err error, trans ut.Translator) []string {
 	var errors []string
 
-	for _, e := range err.(validator.ValidationErrors) {
-		errors = append(errors, e.Error())
+	validatorErrs := err.(validator.ValidationErrors)
+	for _, e := range validatorErrs {
+		errors = append(errors, e.Translate(trans))
 	}
 
 	return errors
